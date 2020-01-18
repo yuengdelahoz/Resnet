@@ -63,7 +63,6 @@ def get_model(input_shape,num_class=1000):
 	num_layers += 1
 	print('conv1',x.shape,'num_layers',num_layers)
 
-
 	#conv2_x
 	for _ in range(3):
 		x = _residual_block(x,filters=64)
@@ -109,4 +108,4 @@ if __name__ == '__main__':
 	import os
 	os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 	model = get_model((224,224,3))
-	# model.summary()
+	model.summary()
