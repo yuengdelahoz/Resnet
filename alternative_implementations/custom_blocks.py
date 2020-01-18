@@ -7,7 +7,7 @@
 # Distributed under terms of the MIT license.
 
 """
-ResNet backbone
+Custom Layers for Resnet architecture using Depth Separable Convolution Layers
 
 """
 
@@ -21,87 +21,91 @@ from tensorflow.keras.layers import (
 		Dense,
 		Add,
 		Softmax,
+		SeparableConv2D,
+		Concatenate,
 		Layer
 		)
 
-class BasicBlock(Layer):
+from tensorflow.keras import Input
+
+class BasicBlockDSC(Layer):
 	def __init__(self,filters,strides=1):
-		super(BasicBlock, self).__init__()
+		super(BasicBlockDSC, self).__init__()
 		self.filters = filters
 		self.strides = strides
 	
 	def build(self,input_shape):
-		self.conv1 = Conv2D(filters=self.filters,kernel_size=(3,3), strides=self.strides,padding='same')
+		self.sepconv1 = SeparableConv2D(filters=self.filters,kernel_size=(3,3),strides=self.strides,padding='same')
 		self.bn = BatchNormalization()
 
-		self.conv2 = Conv2D(filters=self.filters,kernel_size=(3,3), strides=1,padding='same')
+		self.sepconv2 = SeparableConv2D(filters=self.filters,kernel_size=(3,3),padding='same')
 		self.bn2 = BatchNormalization()
 
 		# Projection shortcut
-		self.projection = Conv2D(filters=self.filters,kernel_size=(1,1), strides=self.strides,padding='same')
+		self.projection = SeparableConv2D(filters=self.filters,kernel_size=(1,1),strides=self.strides,padding='same')
 		self.bn3 = BatchNormalization()
 
 		self.activation = ReLU()
 		self.add = Add()
+		self.concatenate = Concatenate()
 
 	def call(self,inputs):
-		x = self.conv1(inputs)
+		x = self.sepconv1(inputs)
 		x = self.bn(x)
 		x = self.activation(x)
 
-		x = self.conv2(x)
+		x = self.sepconv2(x)
 		x = self.bn2(x)
 
-		if inputs.shape == x.shape:
+		if x.shape == inputs.shape:
 			res = self.add([x,inputs])
 		else:
 			res = self.projection(inputs)
 			res = self.bn3(res)
 			res = self.add([x,res])
-		x = self.activation(res)
-		return x
+		return self.activation(res)
 
 	def get_config(self):
-		config = super(BasicBlock, self).get_config()
+		config = super(BasicBlockDSC, self).get_config()
 		config.update({
 			'filters':self.filters,
 			'strides ':self.strides,
 			})
 		return config
 
-class BottleNeck(Layer):
+class BottleNeckDSC(Layer):
 	def __init__(self, filters, strides=1):
-		super(BottleNeck, self).__init__()
+		super(BottleNeckDSC, self).__init__()
 		self.filters = filters
 		self.strides = strides
 	
 	def build(self,input_shape):
-		self.conv1 = Conv2D(filters=self.filters, kernel_size=(1,1), strides=self.strides,padding='same')
+		self.sepconv1 = SeparableConv2D(filters=self.filters,kernel_size=(1,1),strides=self.strides,padding='same')
 		self.bn = BatchNormalization()
 
-		self.conv2 = Conv2D(filters=self.filters, kernel_size=(3,3), strides=1,padding='same')
+		self.sepconv2 = SeparableConv2D(filters=self.filters,kernel_size=(3,3),padding='same')
 		self.bn2 = BatchNormalization()
 
-		self.conv3 = Conv2D(filters=self.filters * 4,kernel_size=(1,1), strides=1,padding='same')
+		self.sepconv3 = SeparableConv2D(filters=self.filters * 4,kernel_size=(1,1),padding='same')
 		self.bn3 = BatchNormalization()
 
 		# Projection shortcut
-		self.projection = Conv2D(filters=self.filters*4,kernel_size=(1,1), strides=self.strides,padding='same')
+		self.projection = SeparableConv2D(filters=self.filters * 4,kernel_size=(1,1),strides=self.strides,padding='same')
 		self.bn4 = BatchNormalization()
 
 		self.add = Add()
 		self.activation = ReLU()
 
 	def call(self,inputs):
-		x = self.conv1(inputs)
+		x = self.sepconv1(inputs)
 		x = self.bn(x)
 		x = self.activation(x)
 
-		x = self.conv2(x)
+		x = self.sepconv2(x)
 		x = self.bn2(x)
 		x = self.activation(x)
 
-		x = self.conv3(x)
+		x = self.sepconv3(x)
 		x = self.bn3(x)
 
 		if inputs.shape == x.shape:
@@ -110,11 +114,10 @@ class BottleNeck(Layer):
 			res = self.projection(inputs)
 			res = self.bn4(res)
 			res = self.add([x,res])
-		x = self.activation(res)
-		return x
+		return self.activation(res)
 
 	def get_config(self):
-		config = super(BottleNeck, self).get_config()
+		config = super(BottleNeckDSC, self).get_config()
 		config.update({
 			'filters':self.filters,
 			'strides ':self.strides,
