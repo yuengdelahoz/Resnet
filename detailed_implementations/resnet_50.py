@@ -7,7 +7,7 @@
 # Distributed under terms of the MIT license.
 
 """
-ResNet-34 Implementation
+ResNet-50 Implementation
 
 """
 
@@ -28,22 +28,26 @@ from tensorflow.keras.layers import (
 		Softmax
 		)
 
-def _residual_block(inputs,filters,strides=1):
+def _residual_block(inputs,filters,strides=1): # bottleneck approach
 	# padding ='same' is important to keep the size of the feature maps the same
 	# This way the ouput size only depends on the number of filters used
-	x = Conv2D(filters=filters,kernel_size=(3,3), strides=strides,padding='same')(inputs)
-	# print(x.shape,inputs.shape) if strides==2 else None
+	cnt = 0
+	x = Conv2D(filters=filters,kernel_size=(1,1), strides=strides,padding='same')(inputs)
 	x = BatchNormalization()(x)
 	x = ReLU()(x)
 
 	x = Conv2D(filters=filters,kernel_size=(3,3), strides=1,padding='same')(x)
+	x = BatchNormalization()(x)
+	x = ReLU()(x)
+
+	x = Conv2D(filters=(filters * 4),kernel_size=(1,1), strides=1,padding='same')(x)
 	x = BatchNormalization()(x)
 
 	if inputs.shape == x.shape:
 		res = Add()([x,inputs])
 	else:
 		# apply projection to make input shape match output shape
-		res = Conv2D(filters=filters,kernel_size=(1,1), strides=strides,padding='same')(inputs)
+		res = Conv2D(filters=filters * 4,kernel_size=(1,1), strides=strides,padding='same')(inputs)
 		res = BatchNormalization()(res)
 		res = Add()([x,res])
 	x = ReLU()(res)
@@ -57,18 +61,18 @@ def get_model(input_shape,num_class=1000):
 	x = MaxPool2D(pool_size=(3,3),strides=2,padding='same')(x) 
 	x = ReLU()(x)
 	num_layers += 1
-	print('conv1',x.shape,'num_layers',num_layers  )
+	print('conv1',x.shape,'num_layers',num_layers)
 
 
 	#conv2_x
 	for _ in range(3):
-		num_layers += 2
 		x = _residual_block(x,filters=64)
+		num_layers += 3
 	print('conv2_x',x.shape,'num_layers',num_layers)
 
 	#conv3_x
 	for i in range(4):
-		num_layers += 2
+		num_layers += 3
 		if i == 0:
 			x = _residual_block(x,filters=128,strides=2)
 		else:
@@ -77,7 +81,7 @@ def get_model(input_shape,num_class=1000):
 
 	#conv4_x
 	for i in range(6):
-		num_layers += 2
+		num_layers += 3
 		if i == 0:
 			x = _residual_block(x,filters=256,strides=2)
 		else:
@@ -86,7 +90,7 @@ def get_model(input_shape,num_class=1000):
 
 	#conv5_x
 	for i in range(3):
-		num_layers += 2
+		num_layers += 3
 		if i == 0:
 			x = _residual_block(x,filters=512,strides=2)
 		else:
@@ -99,7 +103,7 @@ def get_model(input_shape,num_class=1000):
 	x = Softmax()(x)
 	num_layers += 1
 	print('total number of layers:', num_layers)
-	return Model(inputs=input_,outputs=x,name='resnet_34')
+	return Model(inputs=input_,outputs=x,name='resnet_50')
 
 if __name__ == '__main__':
 	import os
