@@ -18,7 +18,7 @@ from tensorflow.keras.layers import (
 		Conv2D,
 		MaxPool2D,
 		ReLU,
-		AveragePooling2D,
+		GlobalAveragePooling2D,
 		Flatten,
 		Dense,
 		SeparableConv2D,
@@ -74,7 +74,7 @@ def _get_resnet(input_shape, ResidualLayer, num_class, name, stages):
 			x = ResidualLayer(filters=512)(x)
 	print('conv5_x output size',x.shape,'time:',time()-t1)
 	
-	x = AveragePooling2D()(x) # defaults to pool_size=strides=(2, 2),
+	x = GlobalAveragePooling2D()(x)
 	x = Flatten()(x)
 	x = Dense(units=num_class)(x)
 	x = Softmax()(x)
@@ -96,10 +96,12 @@ if __name__ == '__main__':
 	import os
 	os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 	os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-	# model = get_resnet_34(input_shape=(224,224,3))
-	model = get_resnet_50(input_shape=(224,224,3))
-	# model = get_resnet_101(input_shape=(224,224,3))
-	# model = get_resnet_152(input_shape=(224,224,3))
+	model = get_resnet_34(input_shape=(224,224,3))
 	model.summary()
-
+	model = get_resnet_50(input_shape=(224,224,3))
+	model.summary()
+	model = get_resnet_101(input_shape=(224,224,3))
+	model.summary()
+	model = get_resnet_152(input_shape=(224,224,3))
+	model.summary()
 

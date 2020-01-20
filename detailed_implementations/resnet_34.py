@@ -21,7 +21,7 @@ from tensorflow.keras.layers import (
 		MaxPool2D,
 		ReLU,
 		BatchNormalization,
-		AveragePooling2D,
+		GlobalAveragePooling2D,
 		Flatten,
 		Dense,
 		Add,
@@ -93,7 +93,7 @@ def get_model(input_shape,num_class=1000):
 			x = _residual_block(x,filters=512)
 	print('conv5_x',x.shape,'num_layers',num_layers)
 	
-	x = AveragePooling2D()(x) # defaults to pool_size=strides=(2, 2),
+	x = GlobalAveragePooling2D()(x)
 	x = Flatten()(x)
 	x = Dense(units=num_class)(x)
 	x = Softmax()(x)
