@@ -31,50 +31,55 @@ from custom_blocks import BasicBlockDSC, BottleNeckDSC
 import numpy as np
 from time import time
 
+activation = ReLU
 def _get_resnet(input_shape, ResidualLayer, num_class, name, stages):
 	input_ = Input(shape=input_shape)
 	#conv1
 	t1 = time()
 	x = SeparableConv2D(filters=64,kernel_size=(7,7),strides=2,padding='same')(input_)
 	print('conv1 output size', x.shape,'time:',time()-t1)
-	x = BatchNormalization()(x) # mine
+	x = BatchNormalization()(x)
+	x = activation()(x)
 	x = MaxPool2D(pool_size=(3,3),strides=2,padding='same')(x) 
-	x = ReLU()(x)
 
 	#conv2_x
 	t1 = time()
-	for _ in range(stages[0]):
-		x = ResidualLayer(filters=64)(x)
+	for i in range(stages[0]):
+		if i == 0 and not isinstance(ResidualLayer,BasicBlockDSC):
+			x = ResidualLayer(filters=64,name='stage_1_{}'.format(i),is_shortcut=True)(x)
+		else:
+			x = ResidualLayer(filters=64,name='stage_1_{}'.format(i))(x)
 	print('conv2_x output size',x.shape,'time:',time()-t1)
 
 	#conv3_x
 	t1 = time()
 	for i in range(stages[1]):
 		if i == 0:
-			x = ResidualLayer(filters=128,strides=2)(x)
+			x = ResidualLayer(filters=128,strides=2, is_shortcut=True,name='stage_2_{}'.format(i))(x)
 		else:
-			x = ResidualLayer(filters=128)(x)
+			x = ResidualLayer(filters=128,name='stage_2_{}'.format(i))(x)
 	print('conv3_x output size',x.shape,'time:',time()-t1)
 
 	#conv4_x
 	t1 = time()
 	for i in range(stages[2]):
 		if i == 0:
-			x = ResidualLayer(filters=256,strides=2)(x)
+			x = ResidualLayer(filters=256,strides=2, is_shortcut=True,name='stage_3_{}'.format(i))(x)
 		else:
-			x = ResidualLayer(filters=256)(x)
+			x = ResidualLayer(filters=256,name='stage_3_{}'.format(i))(x)
 	print('conv4_x output size',x.shape,'time:',time()-t1)
 
 	#conv5_x
 	t1 = time()
 	for i in range(stages[3]):
 		if i == 0:
-			x = ResidualLayer(filters=512,strides=2)(x)
+			x = ResidualLayer(filters=512,strides=2, is_shortcut=True,name='stage_4_{}'.format(i))(x)
 		else:
-			x = ResidualLayer(filters=512)(x)
+			x = ResidualLayer(filters=512,name='stage_4_{}'.format(i))(x)
 	print('conv5_x output size',x.shape,'time:',time()-t1)
 	
 	x = GlobalAveragePooling2D()(x)
+	return Model(inputs=input_,outputs=x,name=name)
 	x = Flatten()(x)
 	x = Dense(units=num_class)(x)
 	x = Softmax()(x)
@@ -96,12 +101,9 @@ if __name__ == '__main__':
 	import os
 	os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 	os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-	model = get_resnet_34(input_shape=(224,224,3))
-	model.summary()
-	model = get_resnet_50(input_shape=(224,224,3))
-	model.summary()
-	model = get_resnet_101(input_shape=(224,224,3))
-	model.summary()
+	# model = get_resnet_34(input_shape=(224,224,3))
+	# model = get_resnet_50(input_shape=(224,224,3))
+	# model = get_resnet_101(input_shape=(224,224,3))
 	model = get_resnet_152(input_shape=(224,224,3))
 	model.summary()
 

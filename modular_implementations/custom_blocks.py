@@ -85,22 +85,23 @@ class BottleNeck(Layer):
 		self.is_shortcut = is_shortcut
 	
 	def build(self,input_shape):
-		self.conv1 = Conv2D(filters=self.filters, kernel_size=(1,1), strides=self.strides,padding='same')
-		self.bn = BatchNormalization()
+		with tf.name_scope(self._name) as scope:
+			self.conv1 = Conv2D(filters=self.filters, kernel_size=(1,1), strides=self.strides,padding='same')
+			self.bn = BatchNormalization()
 
-		self.conv2 = Conv2D(filters=self.filters, kernel_size=(3,3), strides=1,padding='same')
-		self.bn2 = BatchNormalization()
+			self.conv2 = Conv2D(filters=self.filters, kernel_size=(3,3), strides=1,padding='same')
+			self.bn2 = BatchNormalization()
 
-		self.conv3 = Conv2D(filters=self.filters * 4,kernel_size=(1,1), strides=1,padding='same')
-		self.bn3 = BatchNormalization()
+			self.conv3 = Conv2D(filters=self.filters * 4,kernel_size=(1,1), strides=1,padding='same')
+			self.bn3 = BatchNormalization()
 
-		# Projection shortcut
-		if self.is_shortcut:
-			self.projection = Conv2D(filters=self.filters*4,kernel_size=(1,1), strides=self.strides,padding='same')
-			self.bn4 = BatchNormalization()
+			# Projection shortcut
+			if self.is_shortcut:
+				self.projection = Conv2D(filters=self.filters*4,kernel_size=(1,1), strides=self.strides,padding='same')
+				self.bn4 = BatchNormalization()
 
-		self.add = Add()
-		self.activation = ReLU()
+			self.add = Add()
+			self.activation = ReLU()
 
 	def call(self,inputs):
 		x = self.conv1(inputs)

@@ -22,32 +22,33 @@ from tensorflow.keras.layers import (
 		Add,
 		Softmax,
 		SeparableConv2D,
-		Concatenate,
 		Layer
 		)
 
-from tensorflow.keras import Input
-
+import tensorflow as tf
 class BasicBlockDSC(Layer):
-	def __init__(self,filters,strides=1):
+	def __init__(self,filters,name,strides=1,is_shortcut=False):
 		super(BasicBlockDSC, self).__init__()
 		self.filters = filters
 		self.strides = strides
+		self.is_shortcut = is_shortcut
+		self._name = name
 	
 	def build(self,input_shape):
-		self.sepconv1 = SeparableConv2D(filters=self.filters,kernel_size=(3,3),strides=self.strides,padding='same')
-		self.bn = BatchNormalization()
+		with tf.name_scope(self._name) as scope:
+			self.sepconv1 = SeparableConv2D(filters=self.filters,kernel_size=(3,3),strides=self.strides,padding='same')
+			self.bn = BatchNormalization()
 
-		self.sepconv2 = SeparableConv2D(filters=self.filters,kernel_size=(3,3),padding='same')
-		self.bn2 = BatchNormalization()
+			self.sepconv2 = SeparableConv2D(filters=self.filters,kernel_size=(3,3),padding='same')
+			self.bn2 = BatchNormalization()
 
-		# Projection shortcut
-		self.projection = SeparableConv2D(filters=self.filters,kernel_size=(1,1),strides=self.strides,padding='same')
-		self.bn3 = BatchNormalization()
+			# Projection shortcut
+			if self.is_shortcut:
+				self.projection = SeparableConv2D(filters=self.filters,kernel_size=(1,1),strides=self.strides,padding='same')
+				self.bn3 = BatchNormalization()
 
-		self.activation = ReLU()
-		self.add = Add()
-		self.concatenate = Concatenate()
+			self.activation = ReLU()
+			self.add = Add()
 
 	def call(self,inputs):
 		x = self.sepconv1(inputs)
@@ -57,9 +58,11 @@ class BasicBlockDSC(Layer):
 		x = self.sepconv2(x)
 		x = self.bn2(x)
 
-		if x.shape == inputs.shape:
+		if x.shape.as_list() == inputs.shape.as_list():
+			print('identity')
 			res = self.add([x,inputs])
 		else:
+			print('shortcut')
 			res = self.projection(inputs)
 			res = self.bn3(res)
 			res = self.add([x,res])
@@ -70,31 +73,37 @@ class BasicBlockDSC(Layer):
 		config.update({
 			'filters':self.filters,
 			'strides ':self.strides,
+			'_name':self._name,
+			'is_shortcut':self.is_shortcut
 			})
 		return config
 
 class BottleNeckDSC(Layer):
-	def __init__(self, filters, strides=1):
+	def __init__(self, filters, name, strides=1, is_shortcut=False):
 		super(BottleNeckDSC, self).__init__()
 		self.filters = filters
 		self.strides = strides
+		self.is_shortcut = is_shortcut
+		self._name = name
 	
 	def build(self,input_shape):
-		self.sepconv1 = SeparableConv2D(filters=self.filters,kernel_size=(1,1),strides=self.strides,padding='same')
-		self.bn = BatchNormalization()
+		with tf.name_scope(self._name) as scope:
+			self.sepconv1 = SeparableConv2D(filters=self.filters,kernel_size=(1,1),strides=self.strides,padding='same')
+			self.bn = BatchNormalization()
 
-		self.sepconv2 = SeparableConv2D(filters=self.filters,kernel_size=(3,3),padding='same')
-		self.bn2 = BatchNormalization()
+			self.sepconv2 = SeparableConv2D(filters=self.filters,kernel_size=(3,3),padding='same')
+			self.bn2 = BatchNormalization()
 
-		self.sepconv3 = SeparableConv2D(filters=self.filters * 4,kernel_size=(1,1),padding='same')
-		self.bn3 = BatchNormalization()
+			self.sepconv3 = SeparableConv2D(filters=self.filters * 4,kernel_size=(1,1),padding='same')
+			self.bn3 = BatchNormalization()
 
-		# Projection shortcut
-		self.projection = SeparableConv2D(filters=self.filters * 4,kernel_size=(1,1),strides=self.strides,padding='same')
-		self.bn4 = BatchNormalization()
+			# Projection shortcut
+			if self.is_shortcut:
+				self.projection = SeparableConv2D(filters=self.filters * 4,kernel_size=(1,1),strides=self.strides,padding='same')
+				self.bn4 = BatchNormalization()
 
-		self.add = Add()
-		self.activation = ReLU()
+			self.add = Add()
+			self.activation = ReLU()
 
 	def call(self,inputs):
 		x = self.sepconv1(inputs)
@@ -108,9 +117,11 @@ class BottleNeckDSC(Layer):
 		x = self.sepconv3(x)
 		x = self.bn3(x)
 
-		if inputs.shape == x.shape:
+		if inputs.shape.as_list() == x.shape.as_list():
+			# print('identity')
 			res = self.add([x,inputs])
 		else:
+			# print('shortcut')
 			res = self.projection(inputs)
 			res = self.bn4(res)
 			res = self.add([x,res])
@@ -121,5 +132,7 @@ class BottleNeckDSC(Layer):
 		config.update({
 			'filters':self.filters,
 			'strides ':self.strides,
+			'_name':self._name,
+			'is_shortcut':self.is_shortcut
 			})
 		return config
