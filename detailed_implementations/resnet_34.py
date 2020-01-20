@@ -101,9 +101,22 @@ def get_model(input_shape,num_class=1000):
 	print('conv5_x output size',x.shape)
 	
 	x = GlobalAveragePooling2D()(x)
+	return Model(inputs=input_,outputs=x,name='resnet_34')
+	'''
+	After GlobalAveragePooling2D:
+	Total params: 21,310,208
+	Trainable params: 21,293,184
+	Non-trainable params: 17,024
+	'''
 	x = Flatten()(x)
 	x = Dense(units=num_class)(x)
 	x = Softmax()(x)
+	'''
+	After Softmax:
+	Total params: 21,823,208
+	Trainable params: 21,806,184
+	Non-trainable params: 17,024
+	'''
 	return Model(inputs=input_,outputs=x,name='resnet_34')
 
 if __name__ == '__main__':
