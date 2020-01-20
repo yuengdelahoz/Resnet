@@ -24,25 +24,30 @@ from tensorflow.keras.layers import (
 		Layer
 		)
 
+import tensorflow as tf
 class BasicBlock(Layer):
-	def __init__(self,filters,strides=1):
+	def __init__(self,filters,name,strides=1, is_shortcut=False):
 		super(BasicBlock, self).__init__()
 		self.filters = filters
 		self.strides = strides
+		self.is_shortcut = is_shortcut
+		self._name = name
 	
 	def build(self,input_shape):
-		self.conv1 = Conv2D(filters=self.filters,kernel_size=(3,3), strides=self.strides,padding='same')
-		self.bn = BatchNormalization()
+		with tf.name_scope(self._name) as scope:
+			self.conv1 = Conv2D(filters=self.filters,kernel_size=(3,3), strides=self.strides,padding='same')
+			self.bn = BatchNormalization()
 
-		self.conv2 = Conv2D(filters=self.filters,kernel_size=(3,3), strides=1,padding='same')
-		self.bn2 = BatchNormalization()
+			self.conv2 = Conv2D(filters=self.filters,kernel_size=(3,3), strides=1,padding='same')
+			self.bn2 = BatchNormalization()
 
-		# Projection shortcut
-		self.projection = Conv2D(filters=self.filters,kernel_size=(1,1), strides=self.strides,padding='same')
-		self.bn3 = BatchNormalization()
+			# Projection shortcut
+			if self.is_shortcut:
+				self.projection = Conv2D(filters=self.filters,kernel_size=(1,1), strides=self.strides,padding='same')
+				self.bn3 = BatchNormalization()
 
-		self.activation = ReLU()
-		self.add = Add()
+			self.activation = ReLU()
+			self.add = Add()
 
 	def call(self,inputs):
 		x = self.conv1(inputs)
@@ -52,7 +57,7 @@ class BasicBlock(Layer):
 		x = self.conv2(x)
 		x = self.bn2(x)
 
-		if inputs.shape == x.shape:
+		if inputs.shape.as_list() == x.shape.as_list():
 			res = self.add([x,inputs])
 		else:
 			res = self.projection(inputs)
@@ -66,14 +71,18 @@ class BasicBlock(Layer):
 		config.update({
 			'filters':self.filters,
 			'strides ':self.strides,
+			'_name':self._name,
+			'is_shortcut':self.is_shortcut
 			})
 		return config
 
 class BottleNeck(Layer):
-	def __init__(self, filters, strides=1):
+	def __init__(self, filters, name, strides=1,is_shortcut=False):
 		super(BottleNeck, self).__init__()
 		self.filters = filters
 		self.strides = strides
+		self._name = name
+		self.is_shortcut = is_shortcut
 	
 	def build(self,input_shape):
 		self.conv1 = Conv2D(filters=self.filters, kernel_size=(1,1), strides=self.strides,padding='same')
@@ -86,8 +95,9 @@ class BottleNeck(Layer):
 		self.bn3 = BatchNormalization()
 
 		# Projection shortcut
-		self.projection = Conv2D(filters=self.filters*4,kernel_size=(1,1), strides=self.strides,padding='same')
-		self.bn4 = BatchNormalization()
+		if self.is_shortcut:
+			self.projection = Conv2D(filters=self.filters*4,kernel_size=(1,1), strides=self.strides,padding='same')
+			self.bn4 = BatchNormalization()
 
 		self.add = Add()
 		self.activation = ReLU()
@@ -104,7 +114,7 @@ class BottleNeck(Layer):
 		x = self.conv3(x)
 		x = self.bn3(x)
 
-		if inputs.shape == x.shape:
+		if inputs.shape.as_list() == x.shape.as_list():
 			res = self.add([x,inputs])
 		else:
 			res = self.projection(inputs)
@@ -118,5 +128,7 @@ class BottleNeck(Layer):
 		config.update({
 			'filters':self.filters,
 			'strides ':self.strides,
+			'_name':self._name,
+			'is_shortcut':self.is_shortcut
 			})
 		return config

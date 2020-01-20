@@ -28,10 +28,9 @@ from tensorflow.keras.layers import (
 		Softmax
 		)
 
-def _residual_block(inputs,filters,strides=1): # bottleneck approach
+def _residual_block_identity(inputs,filters,strides=1): # bottleneck approach
 	# padding ='same' is important to keep the size of the feature maps the same
 	# This way the ouput size only depends on the number of filters used
-	cnt = 0
 	x = Conv2D(filters=filters,kernel_size=(1,1), strides=strides,padding='same')(inputs)
 	x = BatchNormalization()(x)
 	x = ReLU()(x)
@@ -43,65 +42,83 @@ def _residual_block(inputs,filters,strides=1): # bottleneck approach
 	x = Conv2D(filters=(filters * 4),kernel_size=(1,1), strides=1,padding='same')(x)
 	x = BatchNormalization()(x)
 
-	if inputs.shape == x.shape:
-		res = Add()([x,inputs])
-	else:
-		# apply projection to make input shape match output shape
-		res = Conv2D(filters=filters * 4,kernel_size=(1,1), strides=strides,padding='same')(inputs)
-		res = BatchNormalization()(res)
-		res = Add()([x,res])
+	res = Add()([x,inputs])
+	return x
+
+def _residual_block_shortcut(inputs,filters,strides=1): # bottleneck approach
+	# padding ='same' is important to keep the size of the feature maps the same
+	# This way the ouput size only depends on the number of filters used
+	x = Conv2D(filters=filters,kernel_size=(1,1), strides=strides,padding='same')(inputs)
+	x = BatchNormalization()(x)
+	x = ReLU()(x)
+
+	x = Conv2D(filters=filters,kernel_size=(3,3), strides=1,padding='same')(x)
+	x = BatchNormalization()(x)
+	x = ReLU()(x)
+
+	x = Conv2D(filters=(filters * 4),kernel_size=(1,1), strides=1,padding='same')(x)
+	x = BatchNormalization()(x)
+
+	# apply projection to make input shape match output shape
+	res = Conv2D(filters=filters * 4,kernel_size=(1,1), strides=strides,padding='same')(inputs)
+	res = BatchNormalization()(res)
+	res = Add()([x,res])
 	x = ReLU()(res)
 	return x
 
 def get_model(input_shape,num_class=1000):
-	num_layers = 0
 	input_ = Input(shape=input_shape)
 	#conv1
 	x = Conv2D(filters=64,kernel_size=(7,7), strides=2,padding='same')(input_)
-	x = MaxPool2D(pool_size=(3,3),strides=2,padding='same')(x) 
+	x = BatchNormalization()(x)
 	x = ReLU()(x)
-	num_layers += 1
-	print('conv1',x.shape,'num_layers',num_layers)
+	print('conv1_x output size',x.shape)
 
-	#conv2_x
-	for _ in range(3):
-		x = _residual_block(x,filters=64)
-		num_layers += 3
-	print('conv2_x',x.shape,'num_layers',num_layers)
+	x = MaxPool2D(pool_size=(3,3),strides=2,padding='same')(x) 
 
-	#conv3_x
-	for i in range(4):
-		num_layers += 3
-		if i == 0:
-			x = _residual_block(x,filters=128,strides=2)
-		else:
-			x = _residual_block(x,filters=128)
-	print('conv3_x',x.shape,'num_layers',num_layers)
+	#conv2_x - stage 1 (3)
+	x = _residual_block_shortcut(x,filters=64)
+	x = _residual_block_identity(x,filters=64)
+	x = _residual_block_identity(x,filters=64)
+	print('conv2_x output size',x.shape)
 
-	#conv4_x
-	for i in range(6):
-		num_layers += 3
-		if i == 0:
-			x = _residual_block(x,filters=256,strides=2)
-		else:
-			x = _residual_block(x,filters=256)
-	print('conv4_x',x.shape,'num_layers',num_layers)
+	#conv3_x - stage 2 (4)
+	x = _residual_block_shortcut(x,filters=128,strides=2)
+	x = _residual_block_identity(x,filters=128)
+	x = _residual_block_identity(x,filters=128)
+	x = _residual_block_identity(x,filters=128)
+	print('conv3_x output size',x.shape)
 
-	#conv5_x
-	for i in range(3):
-		num_layers += 3
-		if i == 0:
-			x = _residual_block(x,filters=512,strides=2)
-		else:
-			x = _residual_block(x,filters=512)
-	print('conv5_x',x.shape,'num_layers',num_layers)
+	#conv4_x - stage 3 (6)
+	x = _residual_block_shortcut(x,filters=256,strides=2)
+	x = _residual_block_identity(x,filters=256)
+	x = _residual_block_identity(x,filters=256)
+	x = _residual_block_identity(x,filters=256)
+	x = _residual_block_identity(x,filters=256)
+	x = _residual_block_identity(x,filters=256)
+	print('conv4_x output size',x.shape)
+
+	#conv5_x - stage 4 (3)
+	x = _residual_block_shortcut(x,filters=512,strides=2)
+	x = _residual_block_identity(x,filters=512)
+	x = _residual_block_identity(x,filters=512)
+	print('conv5_x output size',x.shape)
 	
 	x = GlobalAveragePooling2D()(x)
+	'''
+	Total params: 23,587,712
+	Trainable params: 23,534,592
+	Non-trainable params: 53,120
+
+	'''
 	x = Flatten()(x)
 	x = Dense(units=num_class)(x)
 	x = Softmax()(x)
-	num_layers += 1
-	print('total number of layers:', num_layers)
+	'''
+	Total params: 25,636,712
+	Trainable params: 25,583,592
+	Non-trainable params: 53,120
+	'''
 	return Model(inputs=input_,outputs=x,name='resnet_50')
 
 if __name__ == '__main__':

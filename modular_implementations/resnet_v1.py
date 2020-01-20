@@ -19,6 +19,7 @@ from tensorflow.keras.layers import (
 		MaxPool2D,
 		ReLU,
 		GlobalAveragePooling2D,
+		BatchNormalization,
 		Flatten,
 		Dense,
 		Softmax
@@ -31,37 +32,38 @@ def _get_resnet(input_shape, ResidualLayer, num_class, name, stages):
 	input_ = Input(shape=input_shape)
 	#conv1
 	x = Conv2D(filters=64,kernel_size=(7,7), strides=2,padding='same')(input_)
+	x = BatchNormalization()(x)
+	x = ReLU()(x)
 	print('conv1 output size',x.shape)
 	x = MaxPool2D(pool_size=(3,3),strides=2,padding='same')(x) 
-	x = ReLU()(x)
 
 	#conv2_x
-	for _ in range(stages[0]):
-		x = ResidualLayer(filters=64)(x)
+	for i in range(stages[0]):
+		x = ResidualLayer(filters=64,name='stage_1_{}'.format(i))(x)
 	print('conv2_x output size',x.shape)
 
 	#conv3_x
 	for i in range(stages[1]):
 		if i == 0:
-			x = ResidualLayer(filters=128,strides=2)(x)
+			x = ResidualLayer(filters=128,strides=2, is_shortcut=True,name='stage_2_{}'.format(i))(x)
 		else:
-			x = ResidualLayer(filters=128)(x)
+			x = ResidualLayer(filters=128,name='stage_2_{}'.format(i))(x)
 	print('conv3_x output size',x.shape)
 
 	#conv4_x
 	for i in range(stages[2]):
 		if i == 0:
-			x = ResidualLayer(filters=256,strides=2)(x)
+			x = ResidualLayer(filters=256,strides=2, is_shortcut=True,name='stage_3_{}'.format(i))(x)
 		else:
-			x = ResidualLayer(filters=256)(x)
+			x = ResidualLayer(filters=256,name='stage_3_{}'.format(i))(x)
 	print('conv4_x output size',x.shape)
 
 	#conv5_x
 	for i in range(stages[3]):
 		if i == 0:
-			x = ResidualLayer(filters=512,strides=2)(x)
+			x = ResidualLayer(filters=512,strides=2, is_shortcut=True,name='stage_4_{}'.format(i))(x)
 		else:
-			x = ResidualLayer(filters=512)(x)
+			x = ResidualLayer(filters=512,name='stage_4_{}'.format(i))(x)
 	print('conv5_x output size',x.shape)
 	
 	x = GlobalAveragePooling2D()(x)
@@ -86,13 +88,13 @@ if __name__ == '__main__':
 	import os
 	os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 	os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-	model = get_resnet_34(input_shape=(224,224,3))
-	model.summary()
+	# model = get_resnet_34(input_shape=(224,224,3))
+	# model.summary()
 	model = get_resnet_50(input_shape=(224,224,3))
 	model.summary()
-	model = get_resnet_101(input_shape=(224,224,3))
-	model.summary()
-	model = get_resnet_152(input_shape=(224,224,3))
-	model.summary()
+	# model = get_resnet_101(input_shape=(224,224,3))
+	# model.summary()
+	# model = get_resnet_152(input_shape=(224,224,3))
+	# model.summary()
 
 
