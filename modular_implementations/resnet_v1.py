@@ -139,9 +139,9 @@ if __name__ == '__main__':
 	import os
 	os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 	os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-	# model = get_resnet_34(input_shape=(224,224,3))
+	model = get_resnet_34(input_shape=(224,224,3))
 	# model = get_resnet_50(input_shape=(224,224,3))
-	model = get_resnet_101(input_shape=(224,224,3))
+	# model = get_resnet_101(input_shape=(224,224,3))
 	# model = get_resnet_152(input_shape=(224,224,3))
 	model.summary()
 
